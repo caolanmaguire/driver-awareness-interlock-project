@@ -1,20 +1,10 @@
 """Main file - multi threading implemented to run multiple camera feeds at once"""
-import threading
 import cv2
 import mediapipe as mp
-# import hand_pose_estimation
-# import face_pose_estimation
-# import display
 from threading import Thread
-import time
-import cv2
 import dlib
-
-
 import numpy as np
-
-a = 0
-eyelid_state = 0
+import time
 
 
 def face_pose_analysis() -> None:
@@ -32,9 +22,8 @@ def face_pose_analysis() -> None:
 
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
     cap = cv2.VideoCapture(0)
-    global face_pose_x
+    global face_pose_x, a
 
-    global a
     # DETECT THE FACE LANDMARKS
     with mp_face_mesh.FaceMesh\
         (min_detection_confidence=0.7, min_tracking_confidence=0.7) as face_mesh:
@@ -109,6 +98,8 @@ def face_pose_analysis() -> None:
                     else:
                         # print('looking forward')
                         a = 'looking forward'
+                    
+
                     nose_3d_projection, jacobian = cv2.projectPoints\
                         (nose_3d, rot_vec, trans_vec, cam_matrix, dist_matrix)
 
@@ -129,7 +120,7 @@ def face_pose_analysis() -> None:
             if cv2.waitKey(5) & 0xFF == 27:
                 break
 
-def eyelid_detection():
+def eyelid_detection() -> None:
     # Initialize the face detector and shape predictor
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
@@ -146,7 +137,7 @@ def eyelid_detection():
         return ear
 
     # Load the webcam
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     # global variable eyelidstate
     global eyelid_state
@@ -187,10 +178,19 @@ def eyelid_detection():
 
             # Check if the eye aspect ratio is below the threshold (eyes closed)
             if ear < 0.2:
+                # if eyes_closed_timestamp != None:
+                
+                try:
+                    print(time.time() - eyes_closed_timestamp)
+                except Exception as e:
+                    print(e)
+
                 eyelid_state = 'Eyes Closed'
-                cv2.putText(frame, "Eyes Closed", (10, 30),
+                cv2.putText(frame, "Eyes Closed" + str(eyes_closed_timestamp), (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             else:
+                eyes_closed_timestamp = time.time()
+                # eyes_closed_timestamp = None
                 eyelid_state = 'Eyes Open'
 
         # Display the frame
@@ -205,17 +205,19 @@ def eyelid_detection():
     cv2.destroyAllWindows()
 
 
-def display():
+def display() -> None:
     # import pygame module in this program
     import pygame
     pygame.init()
     white = (255, 255, 255)
     green = (0, 255, 0)
     blue = (0, 0, 128)
+    BLACK = (0, 0, 0)
+
     X = 600
     Y = 400
     display_surface = pygame.display.set_mode((X, Y))
-    pygame.display.set_caption('Show Text')
+    pygame.display.set_caption('Car Dashboard')
     font = pygame.font.Font('freesansbold.ttf', 32)
     i = 0
 
@@ -223,11 +225,12 @@ def display():
     global eyelid_state
 
     while True:
-        text = font.render(str(a) + ' | ' + str(eyelid_state), True, green, blue)
+        display_surface.fill(BLACK)
+        text = font.render(str(a) + ' | ' + str(eyelid_state), True, white, BLACK)
         textRect = text.get_rect()
         textRect.center = (X // 2, Y // 2)
         
-        display_surface.fill(white)
+        # display_surface.fill(white)
         display_surface.blit(text, textRect)
 
         for event in pygame.event.get():
@@ -239,21 +242,19 @@ def display():
             # Draws the surface object to the screen.
         pygame.display.update()
 
+if __name__ == '__main__':
 
-# thread1 = cam_thread("face_pose", 0)
-# # thread2 = cam_thread("hand_pose", 1)
-# thread3 = cam_thread("",0,'1') #display.show()
+    #define global variables
+    a = 0
+    eyelid_state = 0
 
+    thread1 = Thread( target=face_pose_analysis, args=() )
+    thread2 = Thread( target=eyelid_detection, args=() )
+    thread3 = Thread( target=display, args=() )
 
+    thread1.start()
+    thread2.start()
+    thread3.start()
 
-
-# thread1 = Thread( target=face_pose_analysis, args=() )
-thread2 = Thread( target=eyelid_detection, args=() )
-thread3 = Thread( target=display, args=() )
-
-# thread1.start()
-thread2.start()
-thread3.start()
-
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
