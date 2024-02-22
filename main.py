@@ -261,7 +261,20 @@ def display() -> None:
             closedEyeImg = pygame.image.load('icons/questionmark.png')
         closedEyeImg = pygame.transform.scale(closedEyeImg, DEFAULT_IMAGE_SIZE)
 
-        carImg = pygame.image.load('icons/attention_alert.png')
+        # looking up
+        # looking right
+        # looking left
+        # looking down
+        if str(a) == 'looking right':
+           carImg = pygame.image.load('icons/car_right.png')
+        elif str(a) == 'looking left':
+           carImg = pygame.image.load('icons/car-left.png')
+        elif str(a) == 'looking down':
+            carImg = pygame.image.load('icons/attention_alert.png')
+        elif str(a) == 'looking forward':
+            carImg = pygame.image.load('icons/correct.png')
+        else:
+            carImg = pygame.image.load('icons/questionmark.png')
         carImg = pygame.transform.scale(carImg, DEFAULT_IMAGE_SIZE)
         car(x,y)
         pygame.display.update()
