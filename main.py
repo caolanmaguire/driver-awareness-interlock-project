@@ -5,6 +5,7 @@ from threading import Thread
 import dlib
 import numpy as np
 import time
+import pygame
 
 
 def face_pose_analysis() -> None:
@@ -21,7 +22,7 @@ def face_pose_analysis() -> None:
     mp_face_mesh = mp.solutions.face_mesh
 
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     global face_pose_x, a
 
     # DETECT THE FACE LANDMARKS
@@ -137,7 +138,7 @@ def eyelid_detection() -> None:
         return ear
 
     # Load the webcam
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     # global variable eyelidstate
     global eyelid_state
@@ -153,6 +154,8 @@ def eyelid_detection() -> None:
 
         # Detect faces in the grayscale frame
         faces = detector(gray)
+
+        eyelid_state = 0
 
         for face in faces:
             # Predict facial landmarks
@@ -182,10 +185,14 @@ def eyelid_detection() -> None:
                 
                 try:
                     print(time.time() - eyes_closed_timestamp)
+                    if time.time() - eyes_closed_timestamp > 5:
+                        eyelid_state = 'Driver deemed unconscious'
+                    else:
+                        eyelid_state = 'Eyes Closed'
                 except Exception as e:
                     print(e)
 
-                eyelid_state = 'Eyes Closed'
+                # eyelid_state = 'Eyes Closed'
                 cv2.putText(frame, "Eyes Closed" + str(eyes_closed_timestamp), (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             else:
@@ -206,41 +213,62 @@ def eyelid_detection() -> None:
 
 
 def display() -> None:
-    # import pygame module in this program
-    import pygame
+
     pygame.init()
-    white = (255, 255, 255)
-    green = (0, 255, 0)
-    blue = (0, 0, 128)
-    BLACK = (0, 0, 0)
 
-    X = 600
-    Y = 400
-    display_surface = pygame.display.set_mode((X, Y))
-    pygame.display.set_caption('Car Dashboard')
-    font = pygame.font.Font('freesansbold.ttf', 32)
-    i = 0
+    display_width = 800
+    display_height = 600
 
-    global a
-    global eyelid_state
+    DEFAULT_IMAGE_SIZE = (150,150)
 
-    while True:
-        display_surface.fill(BLACK)
-        text = font.render(str(a) + ' | ' + str(eyelid_state), True, white, BLACK)
-        textRect = text.get_rect()
-        textRect.center = (X // 2, Y // 2)
-        
-        # display_surface.fill(white)
-        display_surface.blit(text, textRect)
+    gameDisplay = pygame.display.set_mode((display_width,display_height))
+    pygame.display.set_caption('DigiDrive | Car Dashboard')
 
+    black = (0,0,0)
+    white = (255,255,255)
+
+    clock = pygame.time.Clock()
+    crashed = False
+
+    def write_text(text, size, position):
+        font = pygame.font.SysFont("Arial", size, True, False)
+        text = font.render(text, True, white)
+        text_rect = text.get_rect(center=position)
+        gameDisplay.blit(text, text_rect)
+
+    def car(x,y):
+        gameDisplay.blit(carImg, (x,y))
+        gameDisplay.blit(closedEyeImg, (150,y))
+
+    x =  (0)
+    y = (display_height - DEFAULT_IMAGE_SIZE[1])
+
+    while not crashed:
         for event in pygame.event.get():
-
             if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
+                crashed = True
 
-            # Draws the surface object to the screen.
+        gameDisplay.fill(black)
+        write_text("Speedometer", 30, (display_width / 4, (display_height / 2) - (100 / 2) - 35))
+        write_text("RPM", 30, (display_width / 2, (display_height / 2) - (100 / 2) - 35))
+        write_text("Message" + str(a) + ' | ' + str(eyelid_state), 40, (180, 20))
+
+        if str(eyelid_state) == 'Eyes Open':
+           closedEyeImg = pygame.image.load('icons/eye_open.png')
+        elif str(eyelid_state) == 'Eyes Closed':
+           closedEyeImg = pygame.image.load('icons/eye_closed.png')
+        else:
+            closedEyeImg = pygame.image.load('icons/questionmark.png')
+        closedEyeImg = pygame.transform.scale(closedEyeImg, DEFAULT_IMAGE_SIZE)
+
+        carImg = pygame.image.load('icons/attention_alert.png')
+        carImg = pygame.transform.scale(carImg, DEFAULT_IMAGE_SIZE)
+        car(x,y)
         pygame.display.update()
+        clock.tick(60)
+
+    pygame.quit()
+    quit()
 
 if __name__ == '__main__':
 
