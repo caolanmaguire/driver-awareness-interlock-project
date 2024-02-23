@@ -22,7 +22,7 @@ def face_pose_analysis() -> None:
     mp_face_mesh = mp.solutions.face_mesh
 
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     global face_pose_x, a
 
     # DETECT THE FACE LANDMARKS
@@ -138,7 +138,7 @@ def eyelid_detection() -> None:
         return ear
 
     # Load the webcam
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     # global variable eyelidstate
     global eyelid_state
