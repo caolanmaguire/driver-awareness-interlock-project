@@ -247,8 +247,8 @@ def display() -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 crashed = True
-
-        gameDisplay.fill(black)
+        image = pygame.image.load('dashboard-background.png')
+        gameDisplay.blit(image, (0, 0))
         write_text("Speedometer", 30, (display_width / 4, (display_height / 2) - (100 / 2) - 35))
         write_text("RPM", 30, (display_width / 2, (display_height / 2) - (100 / 2) - 35))
         write_text("Message" + str(a) + ' | ' + str(eyelid_state), 40, (180, 20))
