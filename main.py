@@ -232,7 +232,7 @@ def display() -> None:
 
     def write_text(text, size, position):
         font = pygame.font.SysFont("Arial", size, True, False)
-        text = font.render(text, True, white)
+        text = font.render(text, True, black)
         text_rect = text.get_rect(center=position)
         gameDisplay.blit(text, text_rect)
 
