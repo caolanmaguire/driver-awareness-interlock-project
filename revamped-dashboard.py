@@ -4,6 +4,8 @@ from math import pi, cos, sin
 import serial
 import time
 
+bg = pygame.image.load("revamped-dashboard-background.png")
+
 try:
     # open a serial connection
     s = serial.Serial("COM3", 115200)
@@ -84,7 +86,10 @@ def pygame_task():
     speed = 0
     
     while True:
-        screen.fill(NAVY)
+        # screen.fill(NAVY)
+
+        #INSIDE OF THE GAME LOOP
+        screen.blit(bg, (0, 0))
 
         # SPEEDOMETER
         # gauge label
@@ -144,10 +149,11 @@ def pygame_task():
         write_text(str_rpm, 50, ((WIDTH / 4) * 3, (HEIGHT - 30)))
         now = datetime.now()
         formatted = now.strftime("%H:%M:%S")
-        write_text(formatted, 15, (50,10))
+        write_text(formatted, 15, ((WIDTH - (WIDTH/2)),10))
+        write_text('16% Battery', 15, ((WIDTH-70),10))
 
         # title
-        write_text('Digi Drive', 15, ((WIDTH - (WIDTH/2)),10))
+        # write_text('Digi Drive', 15, ((WIDTH - (WIDTH/2)),10))
         # # TIMER
         # # best lap
         # write_text("Best Lap", 25, (((WIDTH / 3.5) / 2) + 20, 12))
