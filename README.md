@@ -1,5 +1,5 @@
 <table>
-  <tr>
+  <tr> 
     <td> <img src="https://avatars.githubusercontent.com/u/36414229?v=4" width="150px"/> </td>
     <td> <img src="https://www.shutterstock.com/image-vector/vector-flat-illustration-grayscale-avatar-600nw-2281862025.jpg" width="150px"/> </td>
   </tr>
