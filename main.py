@@ -6,7 +6,12 @@ import dlib
 import numpy as np
 import time
 import pygame
-
+import pygame
+from datetime import time, datetime
+from math import pi, cos, sin
+import serial
+import time
+import psutil
 
 def face_pose_analysis() -> None:
     """analysis for face pose estimation
@@ -22,8 +27,8 @@ def face_pose_analysis() -> None:
     mp_face_mesh = mp.solutions.face_mesh
 
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-    cap = cv2.VideoCapture(1)
-    global face_pose_x, a
+    cap = cv2.VideoCapture(0)
+    global face_pose_x, face_pose_var
 
     # DETECT THE FACE LANDMARKS
     with mp_face_mesh.FaceMesh\
@@ -78,27 +83,26 @@ def face_pose_analysis() -> None:
                     y = angles[1] * 360
                     z = angles[2] * 360
 
+                    global rpm_state
+                    rpm_state = y
+
                     face_pose_x = angles[0] * 360
-
-                    # a = [x,y,z]
-
-                    # print(nose_2d)
 
                     if y < -10:
                         # print('looking left')
-                        a = 'looking left'
+                        face_pose_var = 'looking left'
                     elif y > 10:
                         # print('looking right')
-                        a = 'looking right'
+                        face_pose_var = 'looking right'
                     elif x < -10:
-                        # print('looking down')
-                        a ='looking down'
+                        print('looking down')
+                        face_pose_var ='looking down'
                     elif x > 10:
                         # print('looking up')
-                        a = 'looking up'
+                        face_pose_var = 'looking up'
                     else:
                         # print('looking forward')
-                        a = 'looking forward'
+                        face_pose_var = 'looking forward'
                     
 
                     nose_3d_projection, jacobian = cv2.projectPoints\
@@ -138,7 +142,7 @@ def eyelid_detection() -> None:
         return ear
 
     # Load the webcam
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     # global variable eyelidstate
     global eyelid_state
@@ -214,80 +218,259 @@ def eyelid_detection() -> None:
 
 def display() -> None:
 
-    pygame.init()
+    bg = pygame.image.load("dashboard-background.png")
 
-    display_width = 800
-    display_height = 600
+    try:
+        # open a serial connection
+        s = serial.Serial("COM3", 115200)
+    except:
+        print('no com channel available')
 
-    DEFAULT_IMAGE_SIZE = (150,150)
 
-    gameDisplay = pygame.display.set_mode((display_width,display_height))
-    pygame.display.set_caption('DigiDrive | Car Dashboard')
+    WHITE = (255, 255, 255)
+    BLACK = (0, 0, 0)
+    RED = (255, 0, 0)
+    PINK = (227, 0, 166)
+    NAVY = (0, 0, 53)
+    GRAY = (178, 170, 234)
 
-    black = (0,0,0)
-    white = (255,255,255)
+    THE_STRING = "MM" + ':' + "SS" + ':' + "MS"
 
-    clock = pygame.time.Clock()
-    crashed = False
+    WIDTH, HEIGHT = 1080, 450
+    center = (510, HEIGHT / 2)
+    clock_radius = 200
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))#, pygame.NOFRAME)
+    developer_screen = pygame.display.set_mode((WIDTH, HEIGHT))#, pygame.NOFRAME)
+
+
+    # car states -> change based on  how you chose to read your data
+    speed_state = 0
+    current_time = 0
+    best_lap = "00:00:00"
+    past_lap = "00:00:00"
+
 
     def write_text(text, size, position):
-        font = pygame.font.SysFont("Arial", size, True, False)
-        text = font.render(text, True, black)
+        font = pygame.font.SysFont("copperplategothic", size, True, False)
+        text = font.render(text, True, WHITE)
         text_rect = text.get_rect(center=position)
-        gameDisplay.blit(text, text_rect)
+        screen.blit(text, text_rect)
 
-    def car(x,y):
-        gameDisplay.blit(carImg, (x,y))
-        gameDisplay.blit(closedEyeImg, (150,y))
 
-    x =  (0)
-    y = (display_height - DEFAULT_IMAGE_SIZE[1])
+    def render_time(start, size, position):
+        hundredth_of_a_second = int(str(start)[-2:])  # hundredth of a second
+        time_in_ms = time((start // 1000) // 3600, ((start // 1000) // 60 % 60), (start // 1000) % 60)
+        time_string = "{}{}{:02d}".format(time_in_ms.strftime("%M:%S"), ':', hundredth_of_a_second)
+        write_text(time_string, size, position)
 
-    while not crashed:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                crashed = True
-        image = pygame.image.load('dashboard-background.png')
-        gameDisplay.blit(image, (0, 0))
-        write_text("Speedometer", 30, (display_width / 4, (display_height / 2) - (100 / 2) - 35))
-        write_text("RPM", 30, (display_width / 2, (display_height / 2) - (100 / 2) - 35))
-        write_text("Message" + str(a) + ' | ' + str(eyelid_state), 40, (180, 20))
 
-        if str(eyelid_state) == 'Eyes Open':
-           closedEyeImg = pygame.image.load('icons/eye_open.png')
-        elif str(eyelid_state) == 'Eyes Closed':
-           closedEyeImg = pygame.image.load('icons/eye_closed.png')
-        else:
-            closedEyeImg = pygame.image.load('icons/questionmark.png')
-        closedEyeImg = pygame.transform.scale(closedEyeImg, DEFAULT_IMAGE_SIZE)
+    # theta is in degrees
+    def polar_to_cartesian(r, theta, width_center, height_center):
+        x = r * sin(pi * theta / 180)
+        y = r * cos(pi * theta / 180)
+        return x + width_center, -(y - height_center)
 
-        # looking up
-        # looking right
-        # looking left
-        # looking down
-        if str(a) == 'looking right':
-           carImg = pygame.image.load('icons/car_right.png')
-        elif str(a) == 'looking left':
-           carImg = pygame.image.load('icons/car-left.png')
-        elif str(a) == 'looking down':
-            carImg = pygame.image.load('icons/attention_alert.png')
-        elif str(a) == 'looking forward':
-            carImg = pygame.image.load('icons/correct.png')
-        else:
-            carImg = pygame.image.load('icons/questionmark.png')
-        carImg = pygame.transform.scale(carImg, DEFAULT_IMAGE_SIZE)
-        car(x,y)
-        pygame.display.update()
-        clock.tick(60)
 
-    pygame.quit()
-    quit()
+    # rg_end is non-inclusive
+    def clock_nums(rg_strt, rg_end, mult, size, r, angle, strt_angle, width_center, height_center):
+        for number in range(rg_strt, rg_end, mult):
+            write_text(str(number), size,
+                    polar_to_cartesian(r, ((number / mult) * angle + strt_angle), width_center, height_center))
+
+
+    def ticks(rg_strt, rg_end, r, angle, strt_angle, width_center, height_center):
+        for number in range(rg_strt, rg_end):
+            tick_start = polar_to_cartesian(r, (number * angle + strt_angle), width_center, height_center)
+            if number % 10 == 0:
+                tick_end = polar_to_cartesian(r - 25, (number * angle + strt_angle), width_center, height_center)
+                pygame.draw.line(screen, GRAY, tick_start, tick_end, 2)
+            elif number % 5 == 0:
+                tick_end = polar_to_cartesian(r - 20, (number * angle + strt_angle), width_center, height_center)
+                pygame.draw.line(screen, GRAY, tick_start, tick_end, 2)
+            else:
+                tick_end = polar_to_cartesian(r - 15, (number * angle + strt_angle), width_center, height_center)
+                pygame.draw.line(screen, GRAY, tick_start, tick_end, 2)
+    def pygame_task():
+        pygame.init()
+        clock = pygame.time.Clock()
+        pygame.display.set_caption("Dashboard")
+
+        speed = 0
+
+        gameExit = False
+        
+        while not gameExit:
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    gameExit = True
+            # screen.fill(NAVY)
+
+            #INSIDE OF THE GAME LOOP
+            screen.blit(bg, (0, 0))
+
+            # SPEEDOMETER
+            # gauge label
+            write_text("Speedometer", 20, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
+            # clock numbers
+            clock_nums(0, 40, 5, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
+            # ticks
+            ticks(0, 36, (clock_radius - 15), 7.714286, 223.2, WIDTH / 4, (HEIGHT / 2) + 65)
+            # speed = speed_state
+            # if speed < 0:
+            #     speed = 0
+            # if speed > 35:
+            #     speed = 35
+            # speed = 0
+            
+            try:
+                msg = s.readline()
+                if msg == b'0\r\n':
+                    if speed != 0:
+                        speed = speed - 2
+                elif msg == b'1\r\n':
+                    if speed >34:
+                        print('woah! slow down there cowboy!')
+                    else:
+                        speed = speed + 2
+                # print(speed)
+            except:
+                speed = 1
+            theta = (speed * (270.0 / 35.0)) + (223.2 - (270.0 / 35.0))
+            # draw line on gauge indicating current speed
+            pygame.draw.line(screen, RED, ((WIDTH / 2) / 2, HEIGHT / 2 + 45),
+                            polar_to_cartesian(140, theta, WIDTH / 4, (HEIGHT / 2) + 45), 4)
+            # print speed below gauge
+            str_speed = str(speed)
+            pygame.draw.rect(screen, GRAY, [WIDTH / 4.8, HEIGHT - 55, WIDTH / 12, HEIGHT / 9], 3)
+            write_text(str_speed, 50, (WIDTH / 4, (HEIGHT - 30)))
+
+            # DRIVER VISIBILITY
+            # gauge label
+            write_text("DRIVER VISIBILITY", 20, ((WIDTH / 4) * 3, (HEIGHT / 2) - (clock_radius / 2) - 35))
+            theta = ((rpm_state + 25) * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+            # draw line on gauge indicating current RPM
+            pygame.draw.line(screen, RED, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
+                            polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
+            
+            theta = ((rpm_state + 30) * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+            # draw line on gauge indicating current RPM
+            pygame.draw.line(screen, RED, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
+                            polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
+            
+            theta = ((rpm_state + 20) * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+            # draw line on gauge indicating current RPM
+            pygame.draw.line(screen, RED, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
+                            polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
+
+
+            # face pose var status - ie looking down at phone
+            if face_pose_var == 'looking down':
+                write_text('Phone is being used!', 50, (WIDTH / 4, (HEIGHT - 30)))
+            # else:
+            #     write_text('', 50, (WIDTH / 4, (HEIGHT - 30)))
+
+
+            now = datetime.now()
+            formatted = now.strftime("%H:%M:%S")
+            write_text(formatted, 15, ((WIDTH - (WIDTH/2)),10))
+            battery = psutil.sensors_battery()
+            write_text(str(battery.percent) + '% Battery', 15, ((WIDTH-70),10))
+
+            pygame.display.flip()
+            clock.tick(60)
+    
+        pygame.init()
+        clock = pygame.time.Clock()
+        pygame.display.set_caption("second dashboard")
+
+        speed = 0
+
+        gameExit = False
+        
+        while not gameExit:
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    gameExit = True
+            # screen.fill(NAVY)
+
+            #INSIDE OF THE GAME LOOP
+            developer_screen.blit(bg, (0, 0))
+
+            # SPEEDOMETER
+            # gauge label
+            write_text("Speedometer", 20, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
+            # clock numbers
+            clock_nums(0, 40, 5, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
+            # ticks
+            ticks(0, 36, (clock_radius - 15), 7.714286, 223.2, WIDTH / 4, (HEIGHT / 2) + 65)
+            # speed = speed_state
+            # if speed < 0:
+            #     speed = 0
+            # if speed > 35:
+            #     speed = 35
+            # speed = 0
+            
+            try:
+                msg = s.readline()
+                if msg == b'0\r\n':
+                    if speed != 0:
+                        speed = speed - 2
+                elif msg == b'1\r\n':
+                    if speed >34:
+                        print('woah! slow down there cowboy!')
+                    else:
+                        speed = speed + 2
+                # print(speed)
+            except:
+                speed = 1
+            theta = (speed * (270.0 / 35.0)) + (223.2 - (270.0 / 35.0))
+            # draw line on gauge indicating current speed
+            pygame.draw.line(developer_screen, RED, ((WIDTH / 2) / 2, HEIGHT / 2 + 45),
+                            polar_to_cartesian(140, theta, WIDTH / 4, (HEIGHT / 2) + 45), 4)
+            # print speed below gauge
+            str_speed = str(speed)
+            pygame.draw.rect(developer_screen, GRAY, [WIDTH / 4.8, HEIGHT - 55, WIDTH / 12, HEIGHT / 9], 3)
+            write_text(str_speed, 50, (WIDTH / 4, (HEIGHT - 30)))
+
+            # DRIVER VISIBILITY
+            # gauge label
+            write_text("DRIVER VISIBILITY", 20, ((WIDTH / 4) * 3, (HEIGHT / 2) - (clock_radius / 2) - 35))
+            theta = ((rpm_state + 25) * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+            # draw line on gauge indicating current RPM
+            pygame.draw.line(developer_screen, RED, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
+                            polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
+            
+            theta = ((rpm_state + 30) * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+            # draw line on gauge indicating current RPM
+            pygame.draw.line(developer_screen, RED, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
+                            polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
+            
+            theta = ((rpm_state + 20) * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+            # draw line on gauge indicating current RPM
+            pygame.draw.line(developer_screen, RED, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
+                            polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
+
+
+            now = datetime.now()
+            formatted = now.strftime("%H:%M:%S")
+            write_text(formatted, 15, ((WIDTH - (WIDTH/2)),10))
+            battery = psutil.sensors_battery()
+            write_text(str(battery.percent) + '% Battery', 15, ((WIDTH-70),10))
+
+            pygame.display.flip()
+            clock.tick(60)
+    
+    pygame_task()
+
 
 if __name__ == '__main__':
 
     #define global variables
-    a = 0
+    face_pose_var = 0
     eyelid_state = 0
+    rpm_state = 0
 
     thread1 = Thread( target=face_pose_analysis, args=() )
     thread2 = Thread( target=eyelid_detection, args=() )

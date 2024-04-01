@@ -3,6 +3,7 @@ from datetime import time, datetime
 from math import pi, cos, sin
 import serial
 import time
+import psutil
 
 bg = pygame.image.load("revamped-dashboard-background.png")
 
@@ -117,7 +118,7 @@ def pygame_task():
                     speed = speed + 2
             # print(speed)
         except:
-            print('no com channel available')
+            speed = 1
         theta = (speed * (270.0 / 35.0)) + (223.2 - (270.0 / 35.0))
         # draw line on gauge indicating current speed
         pygame.draw.line(screen, GRAY, ((WIDTH / 2) / 2, HEIGHT / 2 + 45),
@@ -139,7 +140,7 @@ def pygame_task():
             rpm = 0
         if rpm > 5000:
             rpm = 5000
-        theta = (rpm * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
+        theta = (10.4 * (270.0 / 50.0)) + (223.2 - (270.0 / 50.0))
         # draw line on gauge indicating current RPM
         pygame.draw.line(screen, GRAY, (((WIDTH / 4) * 3), (HEIGHT / 2) + 45),
                          polar_to_cartesian(140, theta, (WIDTH / 4) * 3, (HEIGHT / 2) + 45), 4)
@@ -150,24 +151,8 @@ def pygame_task():
         now = datetime.now()
         formatted = now.strftime("%H:%M:%S")
         write_text(formatted, 15, ((WIDTH - (WIDTH/2)),10))
-        write_text('16% Battery', 15, ((WIDTH-70),10))
-
-        # title
-        # write_text('Digi Drive', 15, ((WIDTH - (WIDTH/2)),10))
-        # # TIMER
-        # # best lap
-        # write_text("Best Lap", 25, (((WIDTH / 3.5) / 2) + 20, 12))
-        # pygame.draw.rect(screen, PINK, [0 + 20, HEIGHT / 40 + 15, WIDTH / 3.5, HEIGHT / 8], 3)
-        # write_text(best_lap, 50, (((WIDTH / 3.5) / 2) + 20, HEIGHT / 8.5))
-        # # current lap
-        # write_text("Current Lap", 25, (((WIDTH / 3.5) / 2) + (WIDTH / 3 + 20), 12))
-        # pygame.draw.rect(screen, PINK, [WIDTH / 3 + 20, HEIGHT / 40 + 15, WIDTH / 3.5, HEIGHT / 8], 3)
-        # start = pygame.time.get_ticks() - current_time
-        # render_time(start, 50, (WIDTH / 2, HEIGHT / 8.5))
-        # # previous lap
-        # write_text("Past Lap", 25, (((WIDTH / 3.5) / 2) + ((WIDTH / 3) * 2 + 20), 12))
-        # pygame.draw.rect(screen, PINK, [((WIDTH / 3) * 2) + 20, HEIGHT / 40 + 15, WIDTH / 3.5, HEIGHT / 8], 3)
-        # write_text(past_lap, 50, (((WIDTH / 3.5) / 2) + ((WIDTH / 3) * 2 + 20), HEIGHT / 8.5))
+        battery = psutil.sensors_battery()
+        write_text(str(battery.percent) + '% Battery', 15, ((WIDTH-70),10))
 
         pygame.display.flip()
         clock.tick(60)
