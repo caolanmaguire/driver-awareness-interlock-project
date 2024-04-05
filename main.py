@@ -12,6 +12,7 @@ from math import pi, cos, sin
 import serial
 import time
 import psutil
+import obd
 
 def face_pose_analysis() -> None:
     """analysis for face pose estimation
@@ -120,7 +121,7 @@ def face_pose_analysis() -> None:
                         .get_default_face_mesh_tesselation_style())
 
             # Display the image
-            cv2.imshow('face pose estimation', image)
+            # cv2.imshow('face pose estimation', image)
             # Terminate the process
             if cv2.waitKey(5) & 0xFF == 27:
                 break
@@ -294,8 +295,7 @@ def display() -> None:
         pygame.init()
         clock = pygame.time.Clock()
         pygame.display.set_caption("Dashboard")
-
-        speed = 0
+        global speed
 
         gameExit = False
         
@@ -313,7 +313,7 @@ def display() -> None:
             # gauge label
             write_text("Speedometer", 20, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
             # clock numbers
-            clock_nums(0, 40, 5, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
+            clock_nums(0, 145, 20, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
             # ticks
             ticks(0, 36, (clock_radius - 15), 7.714286, 223.2, WIDTH / 4, (HEIGHT / 2) + 65)
             # speed = speed_state
@@ -323,19 +323,24 @@ def display() -> None:
             #     speed = 35
             # speed = 0
             
-            try:
-                msg = s.readline()
-                if msg == b'0\r\n':
-                    if speed != 0:
-                        speed = speed - 2
-                elif msg == b'1\r\n':
-                    if speed >34:
-                        print('woah! slow down there cowboy!')
-                    else:
-                        speed = speed + 2
-                # print(speed)
-            except:
-                speed = 1
+
+            #ATTENTION
+            # THIS NEEDS TO RUN FOR DEMO MODE
+            # try:
+            #     msg = s.readline()
+            #     if msg == b'0\r\n':
+            #         if speed != 0:
+            #             speed = speed - 2
+            #     elif msg == b'1\r\n':
+            #         if speed >34:
+            #             print('woah! slow down there cowboy!')
+            #         else:
+            #             speed = speed + 2
+            #     # print(speed)
+            # except:
+            #     speed = 0
+
+
             theta = (speed * (270.0 / 35.0)) + (223.2 - (270.0 / 35.0))
             # draw line on gauge indicating current speed
             pygame.draw.line(screen, RED, ((WIDTH / 2) / 2, HEIGHT / 2 + 45),
@@ -376,15 +381,11 @@ def display() -> None:
             write_text(formatted, 15, ((WIDTH - (WIDTH/2)),10))
             battery = psutil.sensors_battery()
             write_text(str(battery.percent) + '% Battery', 15, ((WIDTH-70),10))
+            global runtime
+            write_text('runtime @ ' + str(runtime), 15, (70,10))
 
             pygame.display.flip()
             clock.tick(60)
-    
-        pygame.init()
-        clock = pygame.time.Clock()
-        pygame.display.set_caption("second dashboard")
-
-        speed = 0
 
         gameExit = False
         
@@ -402,7 +403,7 @@ def display() -> None:
             # gauge label
             write_text("Speedometer", 20, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
             # clock numbers
-            clock_nums(0, 40, 5, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
+            clock_nums(0, 145, 20, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
             # ticks
             ticks(0, 36, (clock_radius - 15), 7.714286, 223.2, WIDTH / 4, (HEIGHT / 2) + 65)
             # speed = speed_state
@@ -422,9 +423,8 @@ def display() -> None:
                         print('woah! slow down there cowboy!')
                     else:
                         speed = speed + 2
-                # print(speed)
             except:
-                speed = 1
+                speed = 0
             theta = (speed * (270.0 / 35.0)) + (223.2 - (270.0 / 35.0))
             # draw line on gauge indicating current speed
             pygame.draw.line(developer_screen, RED, ((WIDTH / 2) / 2, HEIGHT / 2 + 45),
@@ -456,13 +456,43 @@ def display() -> None:
             now = datetime.now()
             formatted = now.strftime("%H:%M:%S")
             write_text(formatted, 15, ((WIDTH - (WIDTH/2)),10))
+            
             battery = psutil.sensors_battery()
             write_text(str(battery.percent) + '% Battery', 15, ((WIDTH-70),10))
+            # global runtime
+            write_text('runtime @ ' + str(runtime), 15, (70,10))
 
             pygame.display.flip()
             clock.tick(60)
     
     pygame_task()
+
+
+def obdScanner() -> None:
+
+    # global speed
+
+    connection = obd.Async("COM5")
+
+    def new_rpm(r):
+        print (int(float(str(r).split(' ')[0])))
+        global speed
+        speed = int(float(str(r).split(' ')[0]))
+    
+    def check_runtime(r):
+        print(int(float(str(r).split(' ')[0])))
+        global runtime
+        runtime = int(float(str(r).split(' ')[0]))
+    
+    connection.watch(obd.commands.RPM, callback=new_rpm)
+    connection.watch(obd.commands.RUN_TIME, callback=check_runtime)
+
+    connection.start()
+
+    # the callback will now be fired upon receipt of new values
+
+    time.sleep(30)
+    connection.stop()
 
 
 if __name__ == '__main__':
@@ -471,14 +501,20 @@ if __name__ == '__main__':
     face_pose_var = 0
     eyelid_state = 0
     rpm_state = 0
+    speed = 0
+    runtime = 0
 
     thread1 = Thread( target=face_pose_analysis, args=() )
     thread2 = Thread( target=eyelid_detection, args=() )
     thread3 = Thread( target=display, args=() )
+    thread4 = Thread( target=obdScanner)
 
     thread1.start()
     thread2.start()
     thread3.start()
+    thread4.start()
+
+    thread4.join()
 
     # cap.release()
     cv2.destroyAllWindows()
