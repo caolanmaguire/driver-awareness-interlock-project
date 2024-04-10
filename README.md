@@ -14,9 +14,17 @@
   <tr><td>First Log - Explanation Video</td><td>16/02/2024</td><td></td></tr>
 </table>-->
 
-<I>Dashboard GUI</i>
+<I>Dashboard GUI</i><br/>
 <img src="img/car-dashboard.png"/>
 <hr>
 
+
+<I>Dashboard GUI</i><br/>
+<img src="img/1710627138210.jpeg"/>
+<hr>
+
+<I>Dashboard GUI</i><br/>
+<img src="img/1710627156506.jpeg"/>
+<hr>
 
 # 3rd Year Semester 2 Project - Driver Awareness Interlock System
