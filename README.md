@@ -9,9 +9,14 @@
   </tr>
 </table>
 
-<table border="1" cellspacing="0">
+<!--<table border="1" cellspacing="0">
   <tr><th>Log Name</th><th>Log Date</th><th>Log Url</th></tr>
   <tr><td>First Log - Explanation Video</td><td>16/02/2024</td><td></td></tr>
-</table>
+</table>-->
+
+<I>Dashboard GUI</i>
+<img src="img/car-dashboard.png"/>
+<hr>
+
 
 # 3rd Year Semester 2 Project - Driver Awareness Interlock System
