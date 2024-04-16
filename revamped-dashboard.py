@@ -92,6 +92,9 @@ def pygame_task():
         #INSIDE OF THE GAME LOOP
         screen.blit(bg, (0, 0))
 
+        # PENALTY DISPLAY
+        write_text("0", 80, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
+
         # SPEEDOMETER
         # gauge label
         write_text("Speedometer", 20, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
