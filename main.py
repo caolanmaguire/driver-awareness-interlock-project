@@ -1,16 +1,16 @@
 """Main file - multi threading implemented to run multiple camera feeds at once"""
+
+import json
 import cv2
 import mediapipe as mp
 from threading import Thread
 import dlib
 import numpy as np
-import time
-import pygame
 import pygame
 from datetime import time, datetime
 from math import pi, cos, sin
 import serial
-import time
+
 import psutil
 import obd
 
@@ -28,8 +28,8 @@ def face_pose_analysis() -> None:
     mp_face_mesh = mp.solutions.face_mesh
 
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-    cap = cv2.VideoCapture(1)
-    global face_pose_x, face_pose_var
+    cap = cv2.VideoCapture(0)
+    global face_pose_x, face_pose_var, settings
 
     # DETECT THE FACE LANDMARKS
     with mp_face_mesh.FaceMesh\
@@ -85,6 +85,8 @@ def face_pose_analysis() -> None:
                     z = angles[2] * 360
 
                     global rpm_state
+                    global penalties_phone
+                    global penalties_eye
                     rpm_state = y
 
                     face_pose_x = angles[0] * 360
@@ -97,6 +99,8 @@ def face_pose_analysis() -> None:
                         face_pose_var = 'looking right'
                     elif x < -10:
                         print('looking down')
+                        if face_pose_var != 'looking down':
+                            penalties_phone = penalties_phone + 1
                         face_pose_var ='looking down'
                     elif x > 10:
                         # print('looking up')
@@ -121,7 +125,8 @@ def face_pose_analysis() -> None:
                         .get_default_face_mesh_tesselation_style())
 
             # Display the image
-            # cv2.imshow('face pose estimation', image)
+            if settings['developer_mode'] == 1:
+                cv2.imshow('face pose estimation', image)
             # Terminate the process
             if cv2.waitKey(5) & 0xFF == 27:
                 break
@@ -147,6 +152,7 @@ def eyelid_detection() -> None:
 
     # global variable eyelidstate
     global eyelid_state
+    global penalties_eye, settings
 
     while True:
         # Read a frame from the webcam
@@ -160,7 +166,7 @@ def eyelid_detection() -> None:
         # Detect faces in the grayscale frame
         faces = detector(gray)
 
-        eyelid_state = 0
+        # eyelid_state = 0
 
         for face in faces:
             # Predict facial landmarks
@@ -189,8 +195,14 @@ def eyelid_detection() -> None:
                 # if eyes_closed_timestamp != None:
                 
                 try:
-                    print(time.time() - eyes_closed_timestamp)
-                    if time.time() - eyes_closed_timestamp > 5:
+                    # print(time.time() - eyes_closed_timestamp)
+                    # print(eyelid_state == 'Eyes Closed')
+                    print(eyelid_state)
+                    if time.time() - eyes_closed_timestamp > 2:
+
+
+                        if eyelid_state == 'Eyes Closed':
+                            penalties_eye = penalties_eye + 1
                         eyelid_state = 'Driver deemed unconscious'
                     else:
                         eyelid_state = 'Eyes Closed'
@@ -198,15 +210,19 @@ def eyelid_detection() -> None:
                     print(e)
 
                 # eyelid_state = 'Eyes Closed'
-                cv2.putText(frame, "Eyes Closed" + str(eyes_closed_timestamp), (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                try:
+                    cv2.putText(frame, "Eyes Closed" + str(eyes_closed_timestamp), (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                except:
+                    print('whoops!')
             else:
                 eyes_closed_timestamp = time.time()
                 # eyes_closed_timestamp = None
                 eyelid_state = 'Eyes Open'
 
         # Display the frame
-        cv2.imshow("Frame", frame)
+        if settings['developer_mode'] == 1:
+            cv2.imshow("Frame", frame)
 
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -219,20 +235,17 @@ def eyelid_detection() -> None:
 
 def display() -> None:
 
-    bg = pygame.image.load("dashboard-background.png")
+    bg = pygame.image.load("dashboards/dashboard-green.png")
 
-    # try:
-    #     # open a serial connection
-    #     s = serial.Serial("COM3", 115200)
-    # except:
-    #     print('no com channel available')
+    try:
+        # open a serial connection
+        s = serial.Serial("COM3", 115200)
+    except:
+        print('no com channel available')
 
 
     WHITE = (255, 255, 255)
-    BLACK = (0, 0, 0)
     RED = (255, 0, 0)
-    PINK = (227, 0, 166)
-    NAVY = (0, 0, 53)
     GRAY = (178, 170, 234)
 
     THE_STRING = "MM" + ':' + "SS" + ':' + "MS"
@@ -296,6 +309,13 @@ def display() -> None:
         clock = pygame.time.Clock()
         pygame.display.set_caption("Dashboard")
         global speed
+        global penalties_phone
+        global penalties_eye
+
+        global driving_light_state
+
+        penalties_phone = 0
+        penalties_eye = 0
        
         gameExit = False
 
@@ -306,6 +326,19 @@ def display() -> None:
                     gameExit = True
             # screen.fill(NAVY)
 
+            if (penalties_eye + penalties_phone) > 15:
+                driving_light_state = 1
+            if (penalties_phone + penalties_eye) > 30:
+                driving_light_state = 2
+
+            if driving_light_state == 0:
+                bg = pygame.image.load("dashboards/dashboard-green.png")
+            elif driving_light_state == 1:
+                bg = pygame.image.load("dashboards/dashboard-yellow.png")
+            else:
+                bg = pygame.image.load("dashboards/dashboard-red.png")
+
+
             #INSIDE OF THE GAME LOOP
             developer_screen.blit(bg, (0, 0))
 
@@ -313,8 +346,10 @@ def display() -> None:
             # gauge label
             write_text("Speedometer", 20, (WIDTH / 4, (HEIGHT / 2) - (clock_radius / 2) - 35))
             # clock numbers
-            clock_nums(0, 145, 20, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
+            # clock_nums(0, 145, 20, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
+            clock_nums(0, 40, 5, 40, (clock_radius - 65), 38.57143, 223.2, (WIDTH / 4), (HEIGHT / 2) + 65)
             # ticks
+            # ticks(0, 36, (clock_radius - 15), 7.714286, 223.2, WIDTH / 4, (HEIGHT / 2) + 65)
             ticks(0, 36, (clock_radius - 15), 7.714286, 223.2, WIDTH / 4, (HEIGHT / 2) + 65)
             # speed = speed_state
             # if speed < 0:
@@ -329,9 +364,9 @@ def display() -> None:
                     if speed != 0:
                         speed = speed - 2
                 elif msg == b'1\r\n':
-                    if speed >34:
-                        print('woah! slow down there cowboy!')
-                    else:
+                    if speed <34:
+                    #     print('woah! slow down there cowboy!')
+                    # else:
                         speed = speed + 2
             except:
                 speed = 0
@@ -372,6 +407,13 @@ def display() -> None:
             # global runtime
             write_text('runtime @ ' + str(runtime), 15, (70,10))
 
+            # lookdown label todo
+            write_text(str(penalties_phone), 30, ((WIDTH - 140),(HEIGHT-50)))
+
+            # eyes count label todo
+            write_text(str(penalties_eye), 30, ((WIDTH - 30),(HEIGHT-50)))
+
+
             # Penalty label todo
             # write_text('formatted', 40, ((WIDTH - (WIDTH/2)),20))
 
@@ -410,22 +452,27 @@ def obdScanner() -> None:
 
 if __name__ == '__main__':
 
+    # f = open('data.json')
+    settings = json.load(open('settings.json'))[0]
+
+    print(settings)
+
     #define global variables
     face_pose_var = 0
     eyelid_state = 0
     rpm_state = 0
     speed = 0
     runtime = 0
+    driving_light_state = 0
 
     thread1 = Thread( target=face_pose_analysis, args=() )
     thread2 = Thread( target=eyelid_detection, args=() )
     thread3 = Thread( target=display, args=() )
-    # thread4 = Thread( target=obdScanner)
+    thread4 = Thread( target=obdScanner)
 
     thread1.start()
     thread2.start()
     thread3.start()
     # thread4.start()
-
-    # cap.release()
+    
     cv2.destroyAllWindows()
