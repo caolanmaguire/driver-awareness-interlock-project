@@ -1,5 +1,6 @@
 """Main file - multi threading implemented to run multiple camera feeds at once"""
 
+import time
 import json
 import cv2
 import mediapipe as mp
@@ -7,7 +8,7 @@ from threading import Thread
 import dlib
 import numpy as np
 import pygame
-from datetime import time, datetime
+from datetime import datetime
 from math import pi, cos, sin
 import serial
 
@@ -15,20 +16,25 @@ import psutil
 import obd
 
 def face_pose_analysis() -> None:
-    """analysis for face pose estimation
+    """Performs face pose analysis using MediaPipe.
+
+    This function captures video feed from the webcam and analyzes the face pose
+    by detecting facial landmarks. It calculates the pose angles and determines
+    the direction the face is looking. Additionally, it visualizes the detected
+    landmarks and face orientation on the video feed.
 
     Args:
-        mp_face_mesh (_type_): _description_
-        cap (_type_): _description_
-        mp_drawing (_type_): _description_
-        mp_drawing_styles (_type_): _description_
+        mp_face_mesh (module): MediaPipe FaceMesh module for landmark detection.
+        cap (cv2.VideoCapture): OpenCV VideoCapture object for capturing video feed.
+        mp_drawing (module): MediaPipe drawing utilities module for visualization.
+        mp_drawing_styles (module): MediaPipe drawing styles module for visualization.
     """
     mp_drawing = mp.solutions.drawing_utils
     mp_drawing_styles = mp.solutions.drawing_styles
     mp_face_mesh = mp.solutions.face_mesh
 
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     global face_pose_x, face_pose_var, settings
 
     # DETECT THE FACE LANDMARKS
@@ -132,6 +138,13 @@ def face_pose_analysis() -> None:
                 break
 
 def eyelid_detection() -> None:
+    """Performs eyelid detection using dlib.
+
+    This function detects the state of eyelids by analyzing facial landmarks
+    detected by dlib's shape predictor. It calculates the eye aspect ratio (EAR)
+    to determine whether the eyes are open or closed.
+
+    """
     # Initialize the face detector and shape predictor
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
@@ -148,7 +161,7 @@ def eyelid_detection() -> None:
         return ear
 
     # Load the webcam
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     # global variable eyelidstate
     global eyelid_state
@@ -424,6 +437,13 @@ def display() -> None:
 
 
 def obdScanner() -> None:
+    """Scans OBD-II data using OBD library.
+
+    This function scans OBD-II data, including RPM and runtime, using the OBD
+    library. It continuously monitors the OBD port and retrieves relevant data
+    for further processing.
+
+    """
 
     # global speed
 
