@@ -9,22 +9,9 @@
   </tr>
 </table>
 
-<!--<table border="1" cellspacing="0">
-  <tr><th>Log Name</th><th>Log Date</th><th>Log Url</th></tr>
-  <tr><td>First Log - Explanation Video</td><td>16/02/2024</td><td></td></tr>
-</table>-->
+<h3>Watch project walkthrough below</h3>
 
-<I>Dashboard GUI</i><br/>
-<img src="img/car-dashboard.png"/>
-<hr>
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/xSmM2ES2M2g/0.jpg)](https://www.youtube.com/embed/xSmM2ES2M2g?si=1E2Nk536_mqW33No)
 
 
-<I>Dashboard GUI</i><br/>
-<img src="img/1710627138210.jpeg"/>
-<hr>
-
-<I>Dashboard GUI</i><br/>
-<img src="img/1710627156506.jpeg"/>
-<hr>
-
-# 3rd Year Semester 2 Project - Driver Awareness Interlock System
+<a href="https://docs.google.com/document/d/e/2PACX-1vS5ZngCvAXEI8rv_xrGbXGh_z5ZA9417LqlGOS6vGaf82oaUMlg7VXZvvE1hFtxh-qRPQCENs6hMhqe/pub">Project writeup</a>
